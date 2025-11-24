@@ -10,22 +10,22 @@ class Context(BaseModel):
 
     # --- LLM Configuration (Global Defaults) ---
     provider: str = Field(
-        default_factory=lambda: os.getenv("MODEL_PROVIDER", "openai"),
+        default_factory=lambda: os.getenv("DEFAULT_MODEL_PROVIDER", "openai"),
         description="LLM provider: openai|anthropic|google-genai|deepseek|ollama"
     )
     
     model: str = Field(
-        default_factory=lambda: os.getenv("MODEL_NAME", "gpt-4o-mini"),
+        default_factory=lambda: os.getenv("DEFAULT_MODEL_NAME", "gpt-4o-mini"),
         description="Default chat model"
     )
     
     api_key: str | None = Field(
-        default_factory=lambda: os.getenv("OPENAI_API_KEY"),
+        default_factory=lambda: os.getenv("DEFAULT_API_KEY"),
         description="Primary API key (e.g., OPENAI_API_KEY)"
     )
     
     base_url: str | None = Field(
-        default_factory=lambda: os.getenv("OPENAI_BASE_URL"),
+        default_factory=lambda: os.getenv("DEFAULT_BASE_URL"),
         description="API base URL (e.g., https://api.openai.com/v1)"
     )
 
