@@ -35,10 +35,10 @@ from agent.utils import (
 
 load_dotenv()
 
-# 配置日志记录器
+# Configure logger
 logger = logging.getLogger(__name__)
 
-# 确保 LangSmith 追踪被启用（可选）
+# Enable LangSmith tracing (optional)
 os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
 
 
@@ -109,14 +109,14 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     Returns:
         Dictionary with state update, including sources and research results
     """
-    # 初始化 Tavily 搜索
+    # Initialize Tavily search
     tavily_search = TavilySearchResults(
         max_results=5,
         search_depth="advanced",
         include_answer=True,
     )
 
-    # 执行搜索
+    # Execute search
     search_query = state["search_query"]
 
     try:
@@ -128,36 +128,36 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
         error_msg = str(e)
         logger.error(f"❌ Tavily search exception: {error_msg}")
 
-        # 检测特定错误类型
+        # Detect specific error types
         if "432" in error_msg or "Client Error" in error_msg:
-            logger.error("🚫 Tavily API Error 432: API 配额已用完或 API Key 无效")
-            logger.error("💡 解决方案：")
-            logger.error("   1. 检查 .env 文件中的 TAVILY_API_KEY")
-            logger.error("   2. 访问 https://tavily.com 检查配额")
-            logger.error("   3. 如需要，申请新的 API Key")
+            logger.error("🚫 Tavily API Error 432: API quota exhausted or API Key invalid")
+            logger.error("💡 Solutions:")
+            logger.error("   1. Check TAVILY_API_KEY in .env file")
+            logger.error("   2. Visit https://tavily.com to check quota")
+            logger.error("   3. Apply for a new API Key if needed")
         elif "401" in error_msg or "Unauthorized" in error_msg:
-            logger.error("🚫 Tavily API Error 401: API Key 无效或未授权")
+            logger.error("🚫 Tavily API Error 401: API Key invalid or unauthorized")
         elif "429" in error_msg or "Too Many Requests" in error_msg:
-            logger.error("🚫 Tavily API Error 429: 请求过于频繁，触发限流")
+            logger.error("🚫 Tavily API Error 429: Too many requests, rate limit triggered")
         elif "timeout" in error_msg.lower():
-            logger.error("🚫 Tavily API Timeout: 请求超时")
+            logger.error("🚫 Tavily API Timeout: Request timeout")
         else:
-            logger.error(f"🚫 Tavily API 未知错误: {error_msg}")
+            logger.error(f"🚫 Tavily API Unknown error: {error_msg}")
 
         search_results = []
 
-    # 调试：打印搜索结果类型和内容
+    # Debug: print search results type and content
     logger.info(f"📊 Search results type: {type(search_results)}")
 
-    # 检查是否返回了错误对象（字符串形式的错误）
+    # Check if error object is returned (error in string form)
     if isinstance(search_results, str):
         logger.error(f"❌ Tavily returned error string: {search_results}")
         if "HTTPError" in search_results or "432" in search_results:
-            logger.error("🚫 Tavily API 配额错误 (HTTP 432)")
-            logger.error("💡 请检查您的 Tavily API 配额和 Key 有效性")
+            logger.error("🚫 Tavily API quota error (HTTP 432)")
+            logger.error("💡 Please check your Tavily API quota and key validity")
         search_results = []
 
-    # 确保 search_results 是列表
+    # Ensure search_results is a list
     if not isinstance(search_results, list):
         logger.warning(f"⚠️ Unexpected search_results type: {type(search_results)}")
         logger.warning("⚠️ Converting to empty list")
@@ -165,27 +165,27 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
 
     logger.info(f"📊 Search results count: {len(search_results)}")
 
-    # 处理结果
+    # Process results
     sources_gathered = []
-    raw_results_for_llm = []  # 用于传递给 LLM 的原始结果
+    raw_results_for_llm = []  # Raw results to pass to LLM
 
     if len(search_results) == 0:
         logger.error(f"❌ No search results returned for query: '{search_query}'")
-        logger.warning("⚠️ 返回占位符以避免流程中断")
-        # 返回一个占位符，避免完全失败
+        logger.warning("⚠️ Returning placeholder to avoid workflow interruption")
+        # Return a placeholder to avoid complete failure
         return {
             "sources_gathered": [],
             "search_query": [state["search_query"]],
             "web_research_result": [
-                f"⚠️ 未能获取关于 '{search_query}' 的搜索结果（可能是 API 配额限制）。"
+                f"⚠️ Unable to retrieve search results for '{search_query}' (possibly due to API quota limit)."
             ],
         }
 
-    # 步骤1: 收集来源信息和原始内容
+    # Step 1: Collect source information and raw content
     for idx, result in enumerate(search_results):
         citation_id = f"[{state['id']}-{idx}]"
 
-        # 检查 result 是否为字典
+        # Check if result is a dictionary
         if not isinstance(result, dict):
             logger.warning(f"⚠️ Skipping non-dict result at index {idx}: {type(result)}")
             continue
@@ -194,9 +194,9 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
             f"📄 Processing result {idx}: url={result.get('url', 'N/A')}, title={result.get('title', 'N/A')}"
         )
 
-        # 收集来源信息
+        # Collect source information
         url = result.get("url", "")
-        title = result.get("title", "未知标题")
+        title = result.get("title", "Unknown Title")
         content = result.get("content", "")
 
         if not url:
@@ -205,14 +205,14 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
 
         sources_gathered.append({"url": url, "title": title, "citation_id": citation_id})
 
-        # 准备给 LLM 的结构化数据
+        # Prepare structured data for LLM
         if content:
             raw_results_for_llm.append(
                 {
                     "citation_id": citation_id,
                     "title": title,
                     "url": url,
-                    "content": content[:2000],  # 限制每个结果的长度，避免 token 超限
+                    "content": content[:2000],  # Limit length per result to avoid token overflow
                 }
             )
             logger.info(f"✅ Prepared content for LLM synthesis with citation_id: {citation_id}")
@@ -226,13 +226,13 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
         return {
             "sources_gathered": [],
             "search_query": [state["search_query"]],
-            "web_research_result": ["⚠️ 未能收集到有效的搜索来源。"],
+            "web_research_result": ["⚠️ Unable to collect valid search sources."],
         }
 
-    # 步骤2: 使用 LLM 合成高质量摘要（带引用）
+    # Step 2: Use LLM to synthesize high-quality summary (with citations)
     logger.info("🤖 Using LLM to synthesize search results into structured summary...")
 
-    # 构建给 LLM 的搜索结果文本
+    # Build search results text for LLM
     search_results_text = ""
     for item in raw_results_for_llm:
         search_results_text += f"\n\n--- Source {item['citation_id']} ---\n"
@@ -240,14 +240,14 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
         search_results_text += f"URL: {item['url']}\n"
         search_results_text += f"Content: {item['content']}\n"
 
-    # 格式化 prompt
+    # Format prompt
     current_date = get_current_date()
     formatted_prompt = web_searcher_instructions.format(
         current_date=current_date,
         research_topic=search_query,
     )
 
-    # 添加搜索结果到 prompt
+    # Add search results to prompt
     formatted_prompt += f"\n\nSearch Results:\n{search_results_text}"
     formatted_prompt += "\n\nIMPORTANT INSTRUCTIONS:"
     formatted_prompt += (
@@ -260,18 +260,18 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     )
     formatted_prompt += "\n- Focus on factual information from the search results only"
 
-    # 初始化 LLM
+    # Initialize LLM
     llm = init_chat_model(
         model=os.getenv("MODEL_NAME", "gpt-4o-mini"),
         model_provider=os.getenv("MODEL_PROVIDER", "openai"),
         api_key=os.getenv("OPENAI_API_KEY"),
         base_url=os.getenv("OPENAI_BASE_URL"),
-        temperature=0.3,  # 较低温度确保更准确的引用
+        temperature=0.3,  # Lower temperature ensures more accurate citations
         max_retries=2,
     )
 
     try:
-        # 调用 LLM 生成摘要
+        # Call LLM to generate summary
         synthesized_result = llm.invoke(formatted_prompt)
         synthesized_text = synthesized_result.content
 
@@ -282,7 +282,7 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
         logger.error(f"❌ LLM synthesis failed: {e!s}")
         logger.warning("⚠️ Falling back to simple concatenation")
 
-        # 回退方案：简单拼接
+        # Fallback: simple concatenation
         research_text_parts = []
         for item in raw_results_for_llm:
             research_text_parts.append(f"{item['content']} {item['citation_id']}")
@@ -323,14 +323,14 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     # Format the prompt
     current_date = get_current_date()
 
-    # 截断摘要以防止 token 超限
-    # 每个摘要最多保留前 1000 个字符
+    # Truncate summaries to prevent token overflow
+    # Keep max 1000 characters per summary
     web_results = state.get("web_research_result", [])
     truncated_summaries = []
     for idx, summary in enumerate(web_results):
         truncated = summary[:1000] if len(summary) > 1000 else summary
         if len(summary) > 1000:
-            truncated += f"\n... [摘要 {idx + 1} 已截断，原长度: {len(summary)} 字符]"
+            truncated += f"\n... [Summary {idx + 1} truncated, original length: {len(summary)} chars]"
         truncated_summaries.append(truncated)
 
     formatted_prompt = reflection_instructions.format(
@@ -395,7 +395,7 @@ def evaluate_research(
     logger.info(f"📊 Is Sufficient: {is_sufficient}")
     logger.info(f"❓ Follow-up queries: {follow_up_count}")
 
-    # 检查终止条件
+    # Check termination conditions
     if is_sufficient:
         logger.info("✅ Research is sufficient, finalizing answer...")
         return "finalize_answer"
@@ -449,31 +449,31 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     )
     result = llm.invoke(formatted_prompt)
 
-    # ============ 学术风格引用系统 ============
+    # ============ Academic-style citation system ============
     content = result.content
 
-    # 步骤0: 移除错误的代码块标记（如果LLM误生成了bash/code块）
+    # Step 0: Remove incorrect code block markers (if LLM mistakenly generated bash/code blocks)
     import re
 
-    content = re.sub(r"```[\w]*\n", "", content)  # 移除开始标记
-    content = re.sub(r"\n```", "", content)  # 移除结束标记
-    content = content.replace("```", "")  # 移除任何残留的```
+    content = re.sub(r"```[\w]*\n", "", content)  # Remove opening markers
+    content = re.sub(r"\n```", "", content)  # Remove closing markers
+    content = content.replace("```", "")  # Remove any remaining ```
 
     logger.info(f"📝 Original content preview: {content[:500]}...")
 
-    # 步骤1: 构建 citation_id -> source 的映射
+    # Step 1: Build citation_id -> source mapping
     citation_map = {}
     all_sources = state.get("sources_gathered", [])
     logger.info(f"📊 Total sources_gathered from state: {len(all_sources)}")
 
-    # 检查是否有来源
+    # Check if sources exist
     if len(all_sources) == 0:
         logger.error("❌ CRITICAL: No sources_gathered in state!")
-        logger.error("💡 可能的原因:")
-        logger.error("   1. Tavily API 配额已用完 (HTTP 432)")
-        logger.error("   2. 所有搜索查询都失败了")
-        logger.error("   3. 网络连接问题")
-        logger.warning("⚠️ 将生成不带引用的答案")
+        logger.error("💡 Possible causes:")
+        logger.error("   1. Tavily API quota exhausted (HTTP 432)")
+        logger.error("   2. All search queries failed")
+        logger.error("   3. Network connection issues")
+        logger.warning("⚠️ Will generate answer without citations")
 
     for source in all_sources:
         citation_id = source.get("citation_id", "")
@@ -484,28 +484,28 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     if citation_map:
         logger.info(
             f"🔍 Citation map keys sample: {list(citation_map.keys())[:10]}"
-        )  # 只显示前10个
+        )  # Only show first 10
 
-    # 步骤2: 提取实际使用的引用（按出现顺序）
-    used_sources = []  # 有序列表
-    citation_to_number = {}  # citation_id -> 引用编号（如 1, 2, 3）
+    # Step 2: Extract actually used citations (in order of appearance)
+    used_sources = []  # Ordered list
+    citation_to_number = {}  # citation_id -> citation number (e.g. 1, 2, 3)
     seen_urls = set()
 
-    # 遍历所有可能的 citation_id，检查是否在文本中出现
+    # Iterate through all possible citation_ids, check if they appear in the text
     for citation_id, source in citation_map.items():
         if citation_id in content:
             logger.info(f"✅ Found citation_id in content: {citation_id}")
             url = source.get("url", "")
 
-            # 去重：相同 URL 只保留一个编号
+            # Deduplication: same URL keeps only one number
             if url and url in seen_urls:
-                # 查找已有的引用编号
+                # Find existing citation number
                 for idx, existing_source in enumerate(used_sources, 1):
                     if existing_source.get("url") == url:
                         citation_to_number[citation_id] = idx
                         break
             else:
-                # 新来源，分配新编号
+                # New source, assign new number
                 used_sources.append(source)
                 citation_to_number[citation_id] = len(used_sources)
                 if url:
@@ -516,12 +516,12 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     logger.info(f"✅ Used sources in final answer: {len(used_sources)}")
     logger.info(f"📝 Citation mapping: {citation_to_number}")
 
-    # 步骤3: 如果没有找到任何引用，使用所有来源
+    # Step 3: If no citations found, use all sources
     if not used_sources and all_sources:
         logger.warning("⚠️ No citations found in LLM output, using all sources")
         used_sources = all_sources
 
-    # 步骤4: 替换 citation_id 为标准学术引用格式 [数字]
+    # Step 4: Replace citation_id with standard academic citation format [number]
     content_with_citations = content
     for citation_id, ref_number in sorted(
         citation_to_number.items(), key=lambda x: len(x[0]), reverse=True
@@ -531,16 +531,16 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
             logger.info(f"🔗 Replacing '{citation_id}' with '{inline_citation}'")
             content_with_citations = content_with_citations.replace(citation_id, inline_citation)
 
-    # 步骤5: 优化引用位置（移除多余空格和换行）
+    # Step 5: Optimize citation positions (remove excess spaces and newlines)
     content_with_citations = re.sub(
-        r"\n+\s*(\[\d+\])",  # 多个换行 + 可能的空格 + [1]
-        r" \1",  # 单个空格 + [1]
+        r"\n+\s*(\[\d+\])",  # Multiple newlines + possible spaces + [1]
+        r" \1",  # Single space + [1]
         content_with_citations,
     )
 
     content_with_citations = re.sub(
-        r"(\[\d+\])\s*\n(?!\n)",  # [1] + 空格 + 单换行（后面不是换行）
-        r"\1 ",  # [1] + 空格
+        r"(\[\d+\])\s*\n(?!\n)",  # [1] + space + single newline (not followed by newline)
+        r"\1 ",  # [1] + space
         content_with_citations,
     )
 
@@ -550,31 +550,28 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         content_with_citations,
     )
 
-    # 步骤6: 清理LLM可能生成的参考文献部分，避免重复
+    # Step 6: Clean up LLM-generated references section to avoid duplication
     content_with_citations = re.sub(
-        r"\n*#+\s*参考文献.*", "", content_with_citations, flags=re.IGNORECASE | re.DOTALL
+        r"\n*#+\s*References.*", "", content_with_citations, flags=re.IGNORECASE | re.DOTALL
     )
     content_with_citations = re.sub(
-        r"\n*参考文献[:：].*", "", content_with_citations, flags=re.IGNORECASE | re.DOTALL
-    )
-    content_with_citations = re.sub(
-        r"\n*References[:：].*", "", content_with_citations, flags=re.IGNORECASE | re.DOTALL
+        r"\n*References:.*", "", content_with_citations, flags=re.IGNORECASE | re.DOTALL
     )
 
-    # 步骤7: 在文章底部添加统一的参考文献列表
+    # Step 7: Add unified references list at the bottom of the article
     if used_sources:
         logger.info(f"📚 Preparing to add {len(used_sources)} references to the final answer")
-        references = "\n\n---\n\n## 📚 参考文献\n\n"
+        references = "\n\n---\n\n## 📚 References\n\n"
         for idx, source in enumerate(used_sources, 1):
             url = source.get("url", "")
             title = source.get("title", "Untitled")
 
-            # 学术引用格式：[编号] 标题 - URL
+            # Academic citation format: [number] Title - URL
             references += f"[{idx}] {title}\n"
             if url:
                 references += f"    {url}\n\n"
             else:
-                references += "    (URL未提供)\n\n"
+                references += "    (URL not provided)\n\n"
 
         content_with_citations += references
         logger.info(f"✅ Successfully added {len(used_sources)} references to the final answer")
@@ -589,10 +586,10 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         logger.error("   2. All web searches failed")
         logger.error("   3. LLM didn't preserve citation markers from summaries")
 
-        # 添加警告说明而不是空列表
-        content_with_citations += "\n\n---\n\n## 📚 参考文献\n\n"
+        # Add warning note instead of empty list
+        content_with_citations += "\n\n---\n\n## 📚 References\n\n"
         content_with_citations += (
-            "*⚠️ 由于 API 限制，无法提供参考文献来源。建议检查 Tavily API 配额。*\n"
+            "*⚠️ Unable to provide reference sources due to API limitations. Please check Tavily API quota.*\n"
         )
 
     return {

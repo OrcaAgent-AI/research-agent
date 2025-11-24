@@ -8,44 +8,127 @@ from pydantic import BaseModel, Field
 class Context(BaseModel):
     """The context configuration for the agent."""
 
-    # --- LLM 相关 ---
+    # --- LLM Configuration (Global Defaults) ---
     provider: str = Field(
-        default="openai", description="llm provider: openai|anthropic|deepseek|ollama"
+        default_factory=lambda: os.getenv("MODEL_PROVIDER", "openai"),
+        description="LLM provider: openai|anthropic|google-genai|deepseek|ollama"
     )
-    model: str = Field(default="gpt-4.1", description="default chat model")
+    
+    model: str = Field(
+        default_factory=lambda: os.getenv("MODEL_NAME", "gpt-4o-mini"),
+        description="Default chat model"
+    )
+    
     api_key: str | None = Field(
-        default=None, description="primary API key if needed (e.g., OPENAI_API_KEY)"
+        default_factory=lambda: os.getenv("OPENAI_API_KEY"),
+        description="Primary API key (e.g., OPENAI_API_KEY)"
+    )
+    
+    base_url: str | None = Field(
+        default_factory=lambda: os.getenv("OPENAI_BASE_URL"),
+        description="API base URL (e.g., https://api.openai.com/v1)"
     )
 
+    # --- Query Generator Configuration ---
     query_generator_model: str = Field(
-        default="gpt-4o-mini",
+        default_factory=lambda: os.getenv("QUERY_GENERATOR_MODEL") or os.getenv("MODEL_NAME", "gpt-4o-mini"),
         metadata={
             "description": "The name of the language model to use for the agent's query generation."
         },
     )
+    
+    query_generator_provider: str = Field(
+        default_factory=lambda: os.getenv("QUERY_GENERATOR_PROVIDER") or os.getenv("MODEL_PROVIDER", "openai"),
+        metadata={
+            "description": "The provider for query generator model."
+        },
+    )
+    
+    query_generator_api_key: str | None = Field(
+        default_factory=lambda: os.getenv("QUERY_GENERATOR_API_KEY") or os.getenv("OPENAI_API_KEY"),
+        metadata={
+            "description": "API key for query generator model."
+        },
+    )
+    
+    query_generator_base_url: str | None = Field(
+        default_factory=lambda: os.getenv("QUERY_GENERATOR_BASE_URL") or os.getenv("OPENAI_BASE_URL"),
+        metadata={
+            "description": "Base URL for query generator model."
+        },
+    )
 
+    # --- Reflection Model Configuration ---
     reflection_model: str = Field(
-        default="gpt-4o-mini",
+        default_factory=lambda: os.getenv("REFLECTION_MODEL") or os.getenv("MODEL_NAME", "gpt-4o-mini"),
         metadata={
             "description": "The name of the language model to use for the agent's reflection."
         },
     )
+    
+    reflection_provider: str = Field(
+        default_factory=lambda: os.getenv("REFLECTION_PROVIDER") or os.getenv("MODEL_PROVIDER", "openai"),
+        metadata={
+            "description": "The provider for reflection model."
+        },
+    )
+    
+    reflection_api_key: str | None = Field(
+        default_factory=lambda: os.getenv("REFLECTION_API_KEY") or os.getenv("OPENAI_API_KEY"),
+        metadata={
+            "description": "API key for reflection model."
+        },
+    )
+    
+    reflection_base_url: str | None = Field(
+        default_factory=lambda: os.getenv("REFLECTION_BASE_URL") or os.getenv("OPENAI_BASE_URL"),
+        metadata={
+            "description": "Base URL for reflection model."
+        },
+    )
 
+    # --- Answer Model Configuration ---
     answer_model: str = Field(
-        default="gpt-4o",
+        default_factory=lambda: os.getenv("ANSWER_MODEL") or os.getenv("MODEL_NAME", "gpt-4o"),
         metadata={
             "description": "The name of the language model to use for the agent's answer generation."
         },
     )
+    
+    answer_provider: str = Field(
+        default_factory=lambda: os.getenv("ANSWER_PROVIDER") or os.getenv("MODEL_PROVIDER", "openai"),
+        metadata={
+            "description": "The provider for answer model."
+        },
+    )
+    
+    answer_api_key: str | None = Field(
+        default_factory=lambda: os.getenv("ANSWER_API_KEY") or os.getenv("OPENAI_API_KEY"),
+        metadata={
+            "description": "API key for answer model."
+        },
+    )
+    
+    answer_base_url: str | None = Field(
+        default_factory=lambda: os.getenv("ANSWER_BASE_URL") or os.getenv("OPENAI_BASE_URL"),
+        metadata={
+            "description": "Base URL for answer model."
+        },
+    )
 
+    # --- Agent Behavior Configuration ---
     number_of_initial_queries: int = Field(
-        default=3,
-        metadata={"description": "The number of initial search queries to generate."},
+        default_factory=lambda: int(os.getenv("NUMBER_OF_INITIAL_QUERIES", "3")),
+        metadata={
+            "description": "The number of initial search queries to generate."
+        },
     )
 
     max_research_loops: int = Field(
-        default=2,
-        metadata={"description": "The maximum number of research loops to perform."},
+        default_factory=lambda: int(os.getenv("MAX_RESEARCH_LOOPS", "2")),
+        metadata={
+            "description": "The maximum number of research loops to perform."
+        },
     )
 
     @classmethod
