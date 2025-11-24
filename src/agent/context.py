@@ -58,6 +58,35 @@ class Context(BaseModel):
         },
     )
 
+    # --- Web Search Model Configuration ---
+    web_search_model: str = Field(
+        default_factory=lambda: os.getenv("WEB_SEARCH_MODEL") or os.getenv("DEFAULT_MODEL_NAME", "gpt-4o-mini"),
+        metadata={
+            "description": "The name of the language model to use for the agent's web search."
+        },
+    )
+    
+    web_search_provider: str = Field(
+        default_factory=lambda: os.getenv("WEB_SEARCH_PROVIDER") or os.getenv("DEFAULT_MODEL_PROVIDER", "openai"),
+        metadata={
+            "description": "The provider for web search model."
+        },
+    )
+    
+    web_search_api_key: str | None = Field(
+        default_factory=lambda: os.getenv("WEB_SEARCH_API_KEY") or os.getenv("DEFAULT_API_KEY"),
+        metadata={
+            "description": "API key for web search model."
+        },
+    )
+    
+    web_search_base_url: str | None = Field(
+        default_factory=lambda: os.getenv("WEB_SEARCH_BASE_URL") or os.getenv("DEFAULT_BASE_URL"),
+        metadata={
+            "description": "Base URL for web search model."
+        },
+    )
+
     # --- Reflection Model Configuration ---
     reflection_model: str = Field(
         default_factory=lambda: os.getenv("REFLECTION_MODEL") or os.getenv("DEFAULT_MODEL_NAME", "gpt-4o-mini"),
