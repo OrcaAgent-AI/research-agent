@@ -61,10 +61,10 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     if state.get("initial_search_query_count") is None:
         state["initial_search_query_count"] = configurable.number_of_initial_queries
     llm = init_chat_model(
-        model=os.getenv("MODEL_NAME", "gpt-4o-mini"),
-        model_provider=os.getenv("MODEL_PROVIDER", "openai"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url=os.getenv("OPENAI_BASE_URL"),
+        model=configurable.query_generator_model,
+        model_provider=configurable.query_generator_provider,
+        api_key=configurable.query_generator_api_key,
+        base_url=configurable.query_generator_base_url,
         temperature=1.0,
         max_retries=2,
     )
@@ -261,11 +261,12 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     formatted_prompt += "\n- Focus on factual information from the search results only"
 
     # Initialize LLM
+    configurable = Context.from_runnable_config(config)
     llm = init_chat_model(
-        model=os.getenv("MODEL_NAME", "gpt-4o-mini"),
-        model_provider=os.getenv("MODEL_PROVIDER", "openai"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url=os.getenv("OPENAI_BASE_URL"),
+        model=configurable.web_search_model,
+        model_provider=configurable.web_search_provider,
+        api_key=configurable.web_search_api_key,
+        base_url=configurable.web_search_base_url,
         temperature=0.3,  # Lower temperature ensures more accurate citations
         max_retries=2,
     )
@@ -340,11 +341,12 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     )
 
     # init Reasoning Model with increased max_tokens
+    configurable = Context.from_runnable_config(config)
     llm = init_chat_model(
-        model=os.getenv("MODEL_NAME", "gpt-4o-mini"),
-        model_provider=os.getenv("MODEL_PROVIDER", "openai"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url=os.getenv("OPENAI_BASE_URL"),
+        model=configurable.reflection_model,
+        model_provider=configurable.reflection_provider,
+        api_key=configurable.reflection_api_key,
+        base_url=configurable.reflection_base_url,
         temperature=1.0,
         max_retries=2,
         max_tokens=2000,
@@ -438,11 +440,12 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     )
 
     # init Reasoning Model
+    configurable = Context.from_runnable_config(config)
     llm = init_chat_model(
-        model=os.getenv("MODEL_NAME", "gpt-4o-mini"),
-        model_provider=os.getenv("MODEL_PROVIDER", "openai"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url=os.getenv("OPENAI_BASE_URL"),
+        model=configurable.answer_model,
+        model_provider=configurable.answer_provider,
+        api_key=configurable.answer_api_key,
+        base_url=configurable.answer_base_url,
         temperature=1.0,
         max_retries=2,
         max_tokens=2000,
